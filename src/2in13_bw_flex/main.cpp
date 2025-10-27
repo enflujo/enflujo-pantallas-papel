@@ -1,27 +1,26 @@
 #include <Arduino.h>
 #include "common/display.h"
+#include "utility/EPD_2in13d.h"
 #include "cucaracha1.h"
 #include "cucaracha2.h"
 #include "cucaracha3.h"
 #include "cucaracha4.h"
 #include "cucaracha5.h"
 
-// Declaración explícita por si el indexador no ve la cabecera aún
-void Display_ClearStrong();
 
 // ===== MODO DEMOSTRACIÓN =====
-// ADVERTENCIA: Partial refresh continuo puede dañar la pantalla.
+// ADVERTENCIA: Refresco parcial continuo puede dañar la pantalla.
 // Este modo incluye protecciones:
-// - Full refresh cada FULL_REFRESH_CYCLES ciclos
-// - Límite de MAX_DEMO_CYCLES iteraciones totales
-// - Sleep automático al finalizar
-// Para uso en producción, incrementar FRAME_DELAY_MS a 180000+ (3+ min)
+// - Refresco completo cada CICLOS_REFRESCO_COMPLETO ciclos
+// - Límite de CICLOS_MAXIMOS_DEMO iteraciones totales
+// - Dormir automático al finalizar
+// Para uso en producción, incrementar PAUSA_CUADRO_MS a 180000+ (3+ min)
 
-#define FRAME_DELAY_MS 100        // Delay entre frames
-#define FULL_REFRESH_CYCLES 2     // Full refresh cada 2 ciclos
-#define MAX_DEMO_CYCLES 4        // Límite: 30 ciclos de animación (150 frames)
+#define PAUSA_CUADRO_MS 100           // Pausa entre cuadros
+#define CICLOS_REFRESCO_COMPLETO 2    // Refresco completo cada 2 ciclos
+#define CICLOS_MAXIMOS_DEMO 4         // Límite: 4 ciclos de animación
 
-static inline void wait_ms(uint32_t ms) {
+static inline void esperar_ms(uint32_t ms) {
   uint32_t t0 = millis();
   while (millis() - t0 < ms) { delay(1); }
 }
@@ -29,17 +28,12 @@ static inline void wait_ms(uint32_t ms) {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("\n=== 2.13 BW FLEX – cucaracha 5 frames (DEMO MODE) ===");
-  Serial.printf("Frame delay: %dms | Full refresh every: %d cycles | Max cycles: %d\n", 
-                FRAME_DELAY_MS, FULL_REFRESH_CYCLES, MAX_DEMO_CYCLES);
-
   if (DEV_Module_Init() != 0) {
-    Serial.println("DEV init failed");
+    Serial.println("Inicialización DEV falló");
     while (true) delay(1000);
   }
-  Display_Init();
-  Display_Clear(); // full clear first to minimize ghosting
-  Serial.println("Display initialized. Starting animation...");
+  Pantalla_Iniciar();
+  Pantalla_Limpiar();
 }
 
 void loop() {
@@ -51,34 +45,28 @@ void loop() {
     gImage_cucaracha5_b
   };
 
-  static int cycleCount = 0;
+  static int contadorCiclos = 0;
   
-  // Protección: limitar el número total de ciclos
-  if (cycleCount >= MAX_DEMO_CYCLES) {
-    Serial.println("\n=== DEMO COMPLETE ===");
-    Serial.println("Performing strong clear (black/white cycles) before sleep...");
-    Display_ClearStrong(); // Limpieza fuerte para eliminar fantasmas
-    wait_ms(2000);   // Esperar a que termine el último refresh
-    Serial.println("Display strongly cleared. Entering sleep mode to protect display.");
-    Display_Sleep();
-    Serial.println("Display in sleep mode. Reset to restart demo.");
-    while (true) delay(10000); // Detener loop
+  if (contadorCiclos >= CICLOS_MAXIMOS_DEMO) {
+    Serial.println("\n=== DEMO COMPLETA ===");
+    Serial.println("Limpiando pantalla antes de dormir (refresco completo)...");
+    // Usar refresco completo directo para fijar el blanco antes de dormir
+    EPD_2IN13D_Clear();
+    esperar_ms(2000);
+    Serial.println("Entrando en modo dormir para proteger pantalla.");
+    Pantalla_Dormir();
+    Serial.println("Pantalla en modo dormir. Reiniciar para recomenzar demo.");
+    while (true) delay(10000);
   }
 
-  // Full refresh periódico para evitar ghosting acumulado
-  if (cycleCount > 0 && cycleCount % FULL_REFRESH_CYCLES == 0) {
-    Serial.printf("\n[Cycle %d] Performing full refresh to clear ghosting...\n", cycleCount);
-    Display_Clear();
-    wait_ms(1000); // Pausa extra después de full refresh
-  }
+  // Sin refrescos completos periódicos - solo refresco parcial para evitar parpadeos
 
-  Serial.printf("[Cycle %d/%d] ", cycleCount + 1, MAX_DEMO_CYCLES);
+  Serial.printf("[Ciclo %d/%d] ", contadorCiclos + 1, CICLOS_MAXIMOS_DEMO);
   for (int i = 0; i < 5; ++i) {
     Serial.printf("%d ", i + 1);
-    Display_Present(negros[i], nullptr);
-    wait_ms(FRAME_DELAY_MS);
+    Pantalla_Presentar(negros[i], nullptr);
+    esperar_ms(PAUSA_CUADRO_MS);
   }
   Serial.println();
-  
-  cycleCount++;
+  contadorCiclos++;
 }

@@ -137,10 +137,10 @@
 #include "common/display.h"
 #include <stdlib.h>
 
-static UBYTE *BlackImage = nullptr;
-static UBYTE *RedImage   = nullptr;
+static UBYTE *ImagenNegra = nullptr;
+static UBYTE *ImagenRoja  = nullptr;
 
-static inline void wait_ms(uint32_t ms) {
+static inline void esperar_ms(uint32_t ms) {
   uint32_t t0 = millis();
   while (millis() - t0 < ms) { delay(10); }
 }
@@ -148,80 +148,80 @@ static inline void wait_ms(uint32_t ms) {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("\n=== 2.13B V3 – test A/B/C (sin sleep intermedio) ===");
+  Serial.println("\n=== 2.13B V3 – prueba A/B/C (sin dormir intermedio) ===");
 
   if (DEV_Module_Init() != 0) {
-    Serial.println("DEV init failed"); return;
+    Serial.println("Inicialización DEV falló"); return;
   }
 
-  Display_Init();                    // init del wrapper
-  Serial.println("Display init OK");
+  Pantalla_Iniciar();                    // inicialización del envoltorio
+  Serial.println("Inicialización de pantalla OK");
 
-  // Limpia el panel antes del primer frame (importantísimo)
-  Serial.println("Clear...");
-  Display_Clear();
-  wait_ms(1000);
+  // Limpia el panel antes del primer cuadro (importantísimo)
+  Serial.println("Limpiando...");
+  Pantalla_Limpiar();
+  esperar_ms(1000);
 
-  UWORD W = Display_Width();
-  UWORD H = Display_Height();
-  UDOUBLE size = ((W % 8 == 0) ? (W / 8) : (W / 8 + 1)) * H;
+  UWORD ancho = Pantalla_Ancho();
+  UWORD alto = Pantalla_Alto();
+  UDOUBLE tamano = ((ancho % 8 == 0) ? (ancho / 8) : (ancho / 8 + 1)) * alto;
 
-  BlackImage = (UBYTE*)malloc(size);
-  RedImage   = (UBYTE*)malloc(size);
-  if (!BlackImage || !RedImage) { Serial.println("No RAM"); return; }
+  ImagenNegra = (UBYTE*)malloc(tamano);
+  ImagenRoja  = (UBYTE*)malloc(tamano);
+  if (!ImagenNegra || !ImagenRoja) { Serial.println("Sin RAM"); return; }
 
-  // ====== Frame A: TODO BLANCO ======
+  // ====== Cuadro A: TODO BLANCO ======
   Serial.println("[A] BLANCO");
-  memset(BlackImage, 0xFF, size);  // 1 = blanco en esta lib
-  memset(RedImage,   0xFF, size);
+  memset(ImagenNegra, 0xFF, tamano);  // 1 = blanco en esta librería
+  memset(ImagenRoja,  0xFF, tamano);
 
-  Paint_NewImage(BlackImage, W, H, 0, WHITE);
-  Paint_SelectImage(BlackImage);
+  Paint_NewImage(ImagenNegra, ancho, alto, 0, WHITE);
+  Paint_SelectImage(ImagenNegra);
   Paint_Clear(WHITE);
 
-  Paint_NewImage(RedImage, W, H, 0, WHITE);
-  Paint_SelectImage(RedImage);
+  Paint_NewImage(ImagenRoja, ancho, alto, 0, WHITE);
+  Paint_SelectImage(ImagenRoja);
   Paint_Clear(WHITE);
 
-  Display_Present(BlackImage, RedImage);
-  wait_ms(1500);
+  Pantalla_Presentar(ImagenNegra, ImagenRoja);
+  esperar_ms(1500);
 
-  // ====== Frame B: NEGRO a la izquierda, SIN rojo ======
+  // ====== Cuadro B: NEGRO a la izquierda, SIN rojo ======
   Serial.println("[B] NEGRO izquierda");
-  memset(BlackImage, 0xFF, size);
-  memset(RedImage,   0xFF, size);
+  memset(ImagenNegra, 0xFF, tamano);
+  memset(ImagenRoja,  0xFF, tamano);
 
-  Paint_SelectImage(BlackImage);
+  Paint_SelectImage(ImagenNegra);
   Paint_Clear(WHITE);
-  Paint_DrawRectangle(0, 0, W/2, H, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+  Paint_DrawRectangle(0, 0, ancho/2, alto, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
 
-  Paint_SelectImage(RedImage);
+  Paint_SelectImage(ImagenRoja);
   Paint_Clear(WHITE); // sin rojo
 
-  Display_Present(BlackImage, RedImage);
-  wait_ms(1500);
+  Pantalla_Presentar(ImagenNegra, ImagenRoja);
+  esperar_ms(1500);
 
-  // ====== Frame C: ROJO círculo a la derecha, SIN negro ======
+  // ====== Cuadro C: ROJO círculo a la derecha, SIN negro ======
   Serial.println("[C] ROJO derecha");
-  memset(BlackImage, 0xFF, size);
-  memset(RedImage,   0xFF, size);
+  memset(ImagenNegra, 0xFF, tamano);
+  memset(ImagenRoja,  0xFF, tamano);
 
-  Paint_SelectImage(RedImage);
+  Paint_SelectImage(ImagenRoja);
   Paint_Clear(WHITE);
-  int cx = (W*3)/4, cy = H/2;
-  int r  = min(W, H)/4;
-  // En buffer rojo: BLACK = píxel rojo, WHITE = blanco
+  int cx = (ancho*3)/4, cy = alto/2;
+  int r  = min(ancho, alto)/4;
+  // En búfer rojo: BLACK = píxel rojo, WHITE = blanco
   Paint_DrawCircle(cx, cy, r, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
 
-  Paint_SelectImage(BlackImage);
+  Paint_SelectImage(ImagenNegra);
   Paint_Clear(WHITE); // sin negro
 
-  Display_Present(BlackImage, RedImage);
-  wait_ms(1500);
+  Pantalla_Presentar(ImagenNegra, ImagenRoja);
+  esperar_ms(1500);
 
   // Dormimos solo al final
-  Serial.println("Sleep");
-  Display_Sleep();
+  Serial.println("Durmiendo");
+  Pantalla_Dormir();
 }
 
 void loop() {}

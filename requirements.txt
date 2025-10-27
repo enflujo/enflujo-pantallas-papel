@@ -1,0 +1,19 @@
+# Dependencias Python para enflujo-pantallas-papel
+# Instalar con: pip install -r requirements.txt
+
+# === Procesamiento de imágenes ===
+# Usado por:
+# - convertidor.py (convertir imágenes a headers C)
+# - fotos-rpi-a-pantalla/ (captura, difuminado, procesamiento)
+Pillow>=10.4.0
+
+# === Comunicación serial ===
+# Usado por:
+# - fotos-rpi-a-pantalla/ (enviar imágenes a ESP32 vía UART)
+# - tools/send_bw_serial.py (herramienta de prueba serial)
+pyserial>=3.5
+
+# === PlatformIO (firmware ESP32) ===
+# Opcional: solo si quieres compilar firmware desde CLI
+# Si usas VS Code con extensión PlatformIO, no es necesario
+platformio>=6.0.0

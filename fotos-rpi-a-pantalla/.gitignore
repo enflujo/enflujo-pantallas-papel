@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ambiente virtual (NOTA: usar .venv en la raíz del proyecto)
+# Este se ignora por si alguien crea uno local por error
+.venv/
+venv/
+ENV/
+env/
+
+# Output files
+out/
+*.bin
+*.jpg
+*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

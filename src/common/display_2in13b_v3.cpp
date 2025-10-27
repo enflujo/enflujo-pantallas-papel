@@ -4,31 +4,31 @@
 
 // Implementación específica para Waveshare 2.13" b V3 (tricolor)
 
-void Display_Init() {
+void Pantalla_Iniciar() {
   EPD_2IN13B_V3_Init();
 }
 
-void Display_Clear() {
+void Pantalla_Limpiar() {
   EPD_2IN13B_V3_Clear();
 }
 
-void Display_Present(const UBYTE* Black, const UBYTE* Red) {
-  // Para este panel tricolor se requieren ambos planos; si Red es nullptr,
+void Pantalla_Presentar(const UBYTE* Negro, const UBYTE* Rojo) {
+  // Para este panel tricolor se requieren ambos planos; si Rojo es nullptr,
   // simplemente enviamos blanco en rojo.
-  static UBYTE empty = 0xFF; // blanco
-  const UBYTE* ry = Red ? Red : &empty;
-  EPD_2IN13B_V3_Display(Black, ry);
+  static UBYTE vacio = 0xFF; // blanco
+  const UBYTE* rj = Rojo ? Rojo : &vacio;
+  EPD_2IN13B_V3_Display(Negro, rj);
 }
 
-void Display_Sleep() {
+void Pantalla_Dormir() {
   EPD_2IN13B_V3_Sleep();
 }
 
-uint16_t Display_Width() {
+uint16_t Pantalla_Ancho() {
   return EPD_2IN13B_V3_WIDTH; // 104
 }
 
-uint16_t Display_Height() {
+uint16_t Pantalla_Alto() {
   return EPD_2IN13B_V3_HEIGHT; // 212
 }
 

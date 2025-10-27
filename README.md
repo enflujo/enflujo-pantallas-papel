@@ -1,44 +1,201 @@
 # Pantallas e-paper
 
-Script para convertir PNG/JPG a arreglos C (black/red) para _Waveshare_ 2.13" (B) V3.
+Herramientas y firmware para pantallas Waveshare 2.13" con ESP32.
 
-Requisitos: Python 3 + Pillow
-
-```bash
-pip install pillow
-```
-
-Uso típico (V3: 212x104; si usas rotación 270 como el demo):
+## Instalación rápida
 
 ```bash
-  python convertidor.py dibujo.png salida.h --width 212 --height 104 --rotate 270 --name fotograma
+# Crear ambiente virtual en la raíz del proyecto
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Instalar todas las dependencias Python
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Opcional: Instalar PlatformIO para compilar firmware
+pip install --upgrade platformio
 ```
 
-En tu programa:
+## Proyectos
+
+### 1. Firmware ESP32 (PlatformIO)
+
+Firmware para controlar pantallas e-paper Waveshare 2.13" desde un ESP32.
+
+**Requisitos:**
+- PlatformIO Core (CLI) o extensión de VS Code
+
+**Instalación de PlatformIO:**
+
+```bash
+# Opción 1: Instalar PlatformIO Core (CLI)
+pip install --upgrade platformio
+
+# Opción 2: Instalar extensión en VS Code
+# Buscar "PlatformIO IDE" en el marketplace de VS Code
+```
+
+**Entornos disponibles:**
+
+- `2in13_bw_flex` - Demo de animación (cucaracha) con pantalla B/W flexible
+- `2in13_bn_fotos` - Modo serial para recibir imágenes desde Raspberry Pi
+- `2in13b_v3` - Pantalla tricolor B/W/R (negro/blanco/rojo)
+
+**Compilar y subir firmware:**
+
+```bash
+# Compilar y subir demo
+platformio run -e 2in13_bw_flex -t upload
+
+# Compilar y subir modo fotos (serial)
+platformio run -e 2in13_bn_fotos -t upload
+```
+
+### 2. Captura de fotos (Raspberry Pi → e-paper)
+
+Directorio: `fotos-rpi-a-pantalla/`
+
+Captura fotos con cámara Raspberry Pi y las muestra en la pantalla e-paper vía ESP32.
+
+**Instalación:**
+
+Las dependencias ya están instaladas con el `requirements.txt` principal. Si aún no lo has hecho:
+
+```bash
+# Desde la raíz del proyecto
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Uso:**
+
+```bash
+# Activar ambiente virtual (si no está activo)
+source .venv/bin/activate
+
+# Capturar y mostrar foto
+cd fotos-rpi-a-pantalla
+python capturar_enviar.py --capturar --difuminado floyd --puerto /dev/ttyACM0 --enviar
+
+# Usar imagen existente
+python capturar_enviar.py --imagen foto.jpg --difuminado floyd --puerto /dev/ttyACM0 --enviar
+```
+
+Ver [fotos-rpi-a-pantalla/README.md](fotos-rpi-a-pantalla/README.md) para más detalles.
+
+### 3. Convertidor de imágenes a headers C
+
+Archivo: `convertidor.py`
+
+Convierte imágenes PNG/JPG a headers C para usar en firmware.
+
+**Uso típico:**
+
+```bash
+# Activar ambiente virtual (si no está activo)
+source .venv/bin/activate
+
+# Convertir imagen
+python convertidor.py dibujo.png salida.h --width 212 --height 104 --rotate 270 --name fotograma
+```
+
+En tu programa C:
 
 ```cpp
-  #include "salida.h"
-  EPD_2IN13B_V3_Display(gImage_fotograma_b, gImage_fotograma_y);
+#include "salida.h"
+EPD_2IN13B_V3_Display(gImage_fotograma_b, gImage_fotograma_y);
 ```
 
-Parámetros posibles:
+**Parámetros disponibles:**
 
 ```bash
-  --black-th 140   Umbral de luminancia para negro (sube/baja si ves gris)
-  --red-min 150    Mínimo R para rojo
-  --red-gap 60     R - max(G,B) mínimo para rojo
-  --dither fs      Dithering Floyd‑Steinberg para simular grises
-  --invert-black   Invierte buffer negro si los colores salen invertidos
-  --invert-red     Invierte buffer rojo si los colores salen invertidos
+--black-th 140   # Umbral de luminancia para negro
+--red-min 150    # Mínimo R para rojo
+--red-gap 60     # R - max(G,B) mínimo para rojo
+--dither fs      # Dithering Floyd-Steinberg
+--invert-black   # Invierte buffer negro
+--invert-red     # Invierte buffer rojo
 ```
 
-## Notas / advertencia
+## Protocolo serial (firmware)
 
-Sacado de: https://www.waveshare.com/wiki/2.13inch_e-Paper_HAT_(D)_Manual#ESP32.2F8266
+- **Baudios**: 115200
+- **Comandos**:
+  - `C` - Limpiar pantalla (confirmación: `c`) - ⚠️ **NO recomendado, causa pantalla en blanco**
+  - `S` + 2756 bytes - Mostrar imagen (confirmación: `s`)
+  - `Q` - Modo dormir (confirmación: `q`)
+- **Formato de imagen**: 104×212 píxeles, 1-bit B/N, MSB primero, 0x00=negro, 0xFF=blanco
 
-Refresh time: The refresh time is the experimental test data, the actual refresh time will have errors, and the actual effect shall prevail. There will be a flickering effect during the global refresh process, this is a normal phenomenon.
-Refresh power consumption: The power consumption data is the experimental test data. The actual power consumption will have a certain error due to the existence of the driver board and the actual use situation. The actual effect shall prevail.
-Refresh in a low temperature environment may appear color cast, it need to be static in the environment of 25℃ for 6 hours before refresh.
+⚠️ **Importante**: NO usar comando `C` (limpiar) antes de enviar imágenes. Enviar imágenes directamente con `S` funciona correctamente.
+
+## Hardware soportado
+
+- **ESP32 Dev Module** (cualquier placa compatible)
+- **Waveshare 2.13" e-Paper**:
+  - Modelo D (B/W flexible) - 104×212 píxeles
+  - Modelo B V3 (B/W/R tricolor) - 104×212 píxeles
+- **Raspberry Pi** (cualquier modelo con cámara, probado en RPi 5)
+
+## Estructura del repositorio
+
+```
+enflujo-pantallas-papel/
+├── src/                           # Código fuente firmware ESP32
+│   ├── common/                    # Código compartido
+│   │   ├── display.h              # Interfaz unificada de pantalla
+│   │   ├── display_2in13_bw_flex.cpp
+│   │   ├── display_2in13b_v3.cpp
+│   │   └── serial_frames.cpp      # Receptor de frames por serial
+│   ├── 2in13_bw_flex/             # Demo animación
+│   ├── 2in13_bn_fotos/            # Modo fotos serial
+│   └── 2in13b_v3/                 # Firmware tricolor
+├── fotos-rpi-a-pantalla/          # Scripts Python para Raspberry Pi
+│   ├── capturar_enviar.py         # Programa principal
+│   ├── dither.py                  # Procesamiento de imagen
+│   ├── enviar_serial.py           # Comunicación serial
+│   ├── requirements.txt           # Dependencias Python
+│   └── README.md                  # Documentación detallada
+├── lib/                           # Bibliotecas (Waveshare EPD)
+├── convertidor.py                 # Convertidor imagen → header C
+├── platformio.ini                 # Configuración PlatformIO
+└── README.md                      # Este archivo
+```
+
+## Notas importantes
+
+### Refresco de pantalla
+
+- **Refresco parcial**: Transiciones rápidas sin parpadeo, puede causar ghosting después de muchas actualizaciones
+- **Refresco completo**: Limpia ghosting pero causa parpadeo negro/blanco
+- **Recomendación**: Usar refresco parcial durante operación normal, hacer refresco completo ocasionalmente
+- **Intervalo mínimo**: 180 segundos entre refrescos (recomendado por fabricante)
+- **Almacenamiento**: Limpiar pantalla antes de almacenar por tiempo prolongado
+
+### Precauciones de hardware
+
+⚠️ **Cable FPC frágil**:
+- NO doblar el cable en dirección vertical a la pantalla
+- NO doblar repetidamente
+- NO doblar hacia el frente de la pantalla
+- Fijar el cable durante desarrollo
+
+⚠️ **Voltaje**: 3.3V (placas V2.1+ soportan 3.3V y 5V)
+
+⚠️ **Cuidado físico**: Evitar caídas, golpes y presión excesiva en la pantalla
+
+⚠️ **Modo sleep**: Enviar pantalla a sleep cuando no esté refrescando para evitar daño por alto voltaje prolongado
+
+## Referencias
+
+- [Waveshare 2.13" e-Paper HAT (D) Manual](https://www.waveshare.com/wiki/2.13inch_e-Paper_HAT_(D)_Manual)
+- Documentación adicional en directorio `fotos-rpi-a-pantalla/README.md`
+
+## Licencia
+
+Este proyecto usa bibliotecas de Waveshare. Ver archivos de biblioteca para detalles de licencia.
+```
 
 ### Communication Method
 
