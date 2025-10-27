@@ -131,8 +131,97 @@
 // }
 
 
-// Archivo movido: el entrypoint para la pantalla 2.13" b V3 ahora está en
-// src/2in13b_v3/main.cpp
-// Este archivo se deja vacío a propósito para evitar múltiples definiciones
-// de setup()/loop() cuando se use build_src_filter.
-// Puedes eliminarlo si no lo necesitas.
+#include <Arduino.h>
+#include "DEV_Config.h"
+#include "GUI_Paint.h"
+#include "common/display.h"
+#include <stdlib.h>
+
+static UBYTE *BlackImage = nullptr;
+static UBYTE *RedImage   = nullptr;
+
+static inline void wait_ms(uint32_t ms) {
+  uint32_t t0 = millis();
+  while (millis() - t0 < ms) { delay(10); }
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+  Serial.println("\n=== 2.13B V3 – test A/B/C (sin sleep intermedio) ===");
+
+  if (DEV_Module_Init() != 0) {
+    Serial.println("DEV init failed"); return;
+  }
+
+  Display_Init();                    // init del wrapper
+  Serial.println("Display init OK");
+
+  // Limpia el panel antes del primer frame (importantísimo)
+  Serial.println("Clear...");
+  Display_Clear();
+  wait_ms(1000);
+
+  UWORD W = Display_Width();
+  UWORD H = Display_Height();
+  UDOUBLE size = ((W % 8 == 0) ? (W / 8) : (W / 8 + 1)) * H;
+
+  BlackImage = (UBYTE*)malloc(size);
+  RedImage   = (UBYTE*)malloc(size);
+  if (!BlackImage || !RedImage) { Serial.println("No RAM"); return; }
+
+  // ====== Frame A: TODO BLANCO ======
+  Serial.println("[A] BLANCO");
+  memset(BlackImage, 0xFF, size);  // 1 = blanco en esta lib
+  memset(RedImage,   0xFF, size);
+
+  Paint_NewImage(BlackImage, W, H, 0, WHITE);
+  Paint_SelectImage(BlackImage);
+  Paint_Clear(WHITE);
+
+  Paint_NewImage(RedImage, W, H, 0, WHITE);
+  Paint_SelectImage(RedImage);
+  Paint_Clear(WHITE);
+
+  Display_Present(BlackImage, RedImage);
+  wait_ms(1500);
+
+  // ====== Frame B: NEGRO a la izquierda, SIN rojo ======
+  Serial.println("[B] NEGRO izquierda");
+  memset(BlackImage, 0xFF, size);
+  memset(RedImage,   0xFF, size);
+
+  Paint_SelectImage(BlackImage);
+  Paint_Clear(WHITE);
+  Paint_DrawRectangle(0, 0, W/2, H, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+
+  Paint_SelectImage(RedImage);
+  Paint_Clear(WHITE); // sin rojo
+
+  Display_Present(BlackImage, RedImage);
+  wait_ms(1500);
+
+  // ====== Frame C: ROJO círculo a la derecha, SIN negro ======
+  Serial.println("[C] ROJO derecha");
+  memset(BlackImage, 0xFF, size);
+  memset(RedImage,   0xFF, size);
+
+  Paint_SelectImage(RedImage);
+  Paint_Clear(WHITE);
+  int cx = (W*3)/4, cy = H/2;
+  int r  = min(W, H)/4;
+  // En buffer rojo: BLACK = píxel rojo, WHITE = blanco
+  Paint_DrawCircle(cx, cy, r, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+
+  Paint_SelectImage(BlackImage);
+  Paint_Clear(WHITE); // sin negro
+
+  Display_Present(BlackImage, RedImage);
+  wait_ms(1500);
+
+  // Dormimos solo al final
+  Serial.println("Sleep");
+  Display_Sleep();
+}
+
+void loop() {}
