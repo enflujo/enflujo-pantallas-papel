@@ -1,4 +1,4 @@
-# cam2paper
+# Camara a pantalla papel
 
 Captura fotos con la cámara del Raspberry Pi y muéstralas en pantalla e-paper con dithering.
 
